@@ -1,6 +1,5 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const bcrypt = require('bcryptjs');
 
 // graphqlHttp can be used as a middleware function for express. 
 // In turn, it will funnel request to the graphQL query parser and forward them to right resolvers.
