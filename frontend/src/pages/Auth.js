@@ -1,12 +1,26 @@
 import React, { Component } from 'react';
 import './Auth.css';
+import AuthContext from '../context/auth-context';
 
 class AuthPage extends Component {
+    // setting state for to check if current page is login or signup
+    state = {
+        isLogin: true
+    };
+
+    static contextType = AuthContext;
+
     constructor(props) {
         super(props);
         this.emailEl = React.createRef();
         this.passwordEl = React.createRef();
     }
+
+    switchHandler = () => {
+        this.setState(prevState => {
+            return {isLogin: !prevState.isLogin};
+        })
+    };
 
     submitHandler = (event) => {
         event.preventDefault();
@@ -18,8 +32,21 @@ class AuthPage extends Component {
         }
         
         // ..send request to backend
-        const requestBody = {
+        let requestBody = {
             query: `
+                query {
+                    login(email: "${email}", password: "${password}") {
+                        userId
+                        token
+                        tokenExpiration
+                    }
+                }
+            `
+        }; 
+
+        if(!this.state.isLogin){
+            requestBody = {
+                query: `
                 mutation {
                     createUser(userInput: {email: "${email}", password: "${password}"}) {
                         _id
@@ -27,14 +54,27 @@ class AuthPage extends Component {
                     }
                 }
             `
-        };
+            };
+        }
 
+        // fetch will return promise and so the err will be of networking issues rather than backend errors.
         fetch('http://localhost:8000/graphql', {
             method: 'POST',
             body: JSON.stringify(requestBody),
             headers: {
                 'Content-Type': 'application/json'
             }
+        }).then(res => {
+            if(res.status !== 200 && res.status !== 201){
+                throw new Error('Failed!');
+            }
+            return res.json();
+        }).then(resData => {
+            if(resData.data.login.token) {
+                this.context.login( resData.data.login.token, resData.data.login.userId, resData.data.login.tokenExpiration );
+            }
+        }).catch(err => {
+            console.log(err);
         });
 
     };
@@ -51,7 +91,7 @@ class AuthPage extends Component {
                 </div>
                 <div className = "form-actions">
                     <button type = "submit">Submit</button>
-                    <button type="button">Switch to Signup</button>
+        <button type="button" onClick = {this.switchHandler}>Switch to {this.state.isLogin ? 'Signup' : 'Login'}</button>
                 </div>
             </form>
         );
